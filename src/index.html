@@ -1,12 +1,27 @@
 <!DOCTYPE html>
-<html lang="en">
+<html>
   <head>
+    <link rel="stylesheet" href="./style.css" />
     <meta charset="UTF-8" />
     <meta http-equiv="X-UA-Compatible" content="IE=edge" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Document</title>
+    <title>Learning HTML</title>
   </head>
   <body>
-    <script src="./os/sys/shell.js"></script>
+    <div class="shellMainContainer">
+      <!--  -->
+      <div id="shellOutputContainer">
+        <div class="shellOutput">$ Welcome to JS Shell</div>
+      </div>
+      <div class="shellLine">
+        <!--  -->
+        <span class="shellPrompt">$</span>
+        <span id="shellInput" contenteditable="true" autofocus="true"></span>
+      </div>
+    </div>
+    <div class="nano invisible" contenteditable="true"></div>
+    <script type="module" src="./sys/main.js"></script>
+    <script type="module" src="./sys/fs.js"></script>
+    <script type="module" src="./lib/lib.js"></script>
   </body>
 </html>

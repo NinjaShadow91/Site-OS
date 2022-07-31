@@ -1,4 +1,4 @@
-class sFile {
+export class sFile {
   #name;
   #content;
   #contentType;
@@ -18,7 +18,7 @@ class sFile {
     if (!(typeof location === "string") || location === "")
       throw new Error("File System Error: Not a valid location.");
 
-    if (name === "root" && location == "/root") {
+    if (name === "root" && location == "/") {
       this.#name = name;
       this.#properties.location = location;
     } else {
@@ -210,6 +210,10 @@ class sFile {
     return rArr[rArr.length - 2];
   }
 
+  // getPermissions(){
+  //   return this.#properties.permissions;
+  // }
+
   // // Returns empty array in case directory dont have any files
   getFiles() {
     if (this.#contentType !== "DIR")
@@ -259,41 +263,44 @@ class sFile {
   }
 }
 
-const ROOT_DIR = new sFile("root", "/root", "DIR");
+export const ROOT_DIR = new sFile("root", "/", "DIR");
 
-// Returns undefined in case not found
-function pathParser(path, wDir = null, rDir = ROOT_DIR) {
+//
+/**
+ * pathParser
+ * Returns null in case not found else returns file found
+ * @param {string} path Path variable description
+ * @param {sFile} rDir Root directory
+ * @returns null | sFile
+ */
+export function pathParser(path) {
   if (!(typeof path === "string") || path === "")
     throw new Error("File System Error: Not a valid path.");
 
-  let pDir;
-  if (path.charAt(0) === "/") {
-    if (!(rDir instanceof sFile) || !rDir.isDirectory())
-      throw new Error("File System Error: rDir is not a directory.");
-    pDir = rDir;
-  } else {
-    if (!(wDir instanceof sFile) || !wDir.isDirectory())
-      throw new Error("File System Error: wDir is not a directory.");
-    pDir = wDir;
-  }
+  let pDir = ROOT_DIR;
 
   let subDirs = [];
   path.split("/").forEach((i) => {
     if (i !== "") subDirs.push(i);
   });
 
+  // console.log(subDirs);
+
   for (let i = 0; i < subDirs.length; ++i) {
     let isPresent = false;
     if (!(pDir.getName() === subDirs[i])) {
-      for (let j = 0; j < pDir.getSubDirectories().length; ++j) {
-        if (pDir.getSubDirectories()[j].getName() === subDirs[i]) {
-          pDir = pDir.getSubDirectories()[j];
+      for (let j = 0; j < pDir.getContent().length; ++j) {
+        if (pDir.getContent()[j].getName() === subDirs[i]) {
+          pDir = pDir.getContent()[j];
+          if (!pDir.isDirectory() && i !== subDirs.length - 1) return null;
+          // console.log("for", i, pDir);
           isPresent = true;
           break;
         }
       }
       if (!isPresent) {
-        return;
+        // console.log("ret", pDir);
+        return null;
       }
     }
   }
