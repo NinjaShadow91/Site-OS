@@ -1,43 +1,76 @@
-import { getAbsPath } from "../lib/lib.js";
-import { pathParser } from "../sys/fs.js";
+import { getAbsPath, getFile } from "../lib/lib.js";
 
-export function ls(command) {
-  let directory = pathParser(getAbsPath(command.others[0], command.wPath));
-  let flags = command.flags;
-  // let workingDirectory = command.workingDirectory
-  let files = { [directory.getName()]: directory.getFiles() };
-  let subDirectories = directory.getSubDirectories();
-  // cons
-  subDirectories.forEach((subDir) => {
-    files[subDir.getParent()].push(subDir);
-    if (flags.includes("R")) files[subDir.getName()] = subDir.getFiles();
+function recurseDir(dir, includeHidden = false) {
+  let ret = { [dir.getName()]: dir.getContent() };
+  let content = dir.getContent();
+  content.forEach((element) => {
+    if (includeHidden || element.getName().charAt(0) !== ".") {
+      if (element.isDirectory()) {
+        ret = { ...ret, ...recurseDir(element) };
+      }
+    }
   });
+  return ret;
+}
+
+export function ls(programBlock) {
+  let directory = getFile(
+    getAbsPath(programBlock.others[0], programBlock.wPath)
+  );
+  let flags = programBlock.flags;
+  let files;
+  if (flags.includes("R")) files = recurseDir(directory);
+  else files = { [directory.getName()]: directory.getContent() };
+
+  console.log(recurseDir(directory));
 
   let outputHTML = "";
-  if (flags.includes("a")) {
-    for (const dir in files) {
-      // console.log(`${dir}`);
-      outputHTML = outputHTML.concat(`<b>Directory: ${dir}</b><br>`);
-      files[dir].forEach((file) => {
-        // console.log(`${dir}\n\n`);
+  for (const dir in files) {
+    if (flags.includes("R"))
+      outputHTML = outputHTML.concat(`Directory: ${dir}<br>`);
+    files[dir].forEach((file) => {
+      if (flags.includes("a") || file.getName().charAt(0) !== ".") {
         if (flags.includes("l")) {
           let detailString;
-          //   if (file.isDirectory()) {
-          //     detailString = "d".concat(file.getPermissions());
-          //   } else detailString = file.getPermissions();
+          if (file.isDirectory()) {
+            detailString = "d"
+              .concat(file.getPermissions())
+              .concat("   ")
+              .concat(file.getCreationTime());
+            // .concat(file.getCreationTime().toDateString());
+          } else
+            detailString = file
+              .getPermissions()
+              .concat("   ")
+              .concat(file.getCreationTime());
+          // .concat(file.getCreationTime().toDateString());
           // console.log(`${detailString} ${file.getName()}\n`);
-          outputHTML = outputHTML.concat(`${file.getName()}<br>`);
+          if (file.isDirectory()) {
+            outputHTML = outputHTML.concat(
+              `<pre style="color:blue;margin:0px;padding:0px">${detailString}     ${file.getSize()}      ${file.getName()}</pre>`
+            );
+          } else {
+            outputHTML = outputHTML.concat(
+              `<pre>${detailString}     ${file.getSize()}       ${file.getName()}</pre>`
+            );
+          }
+        } else {
+          if (file.isDirectory()) {
+            outputHTML = outputHTML.concat(
+              `<span style="color:blue;">${file.getName()}</span> `
+            );
+          } else {
+            outputHTML = outputHTML.concat(`${file.getName()} `);
+          }
         }
-      });
-    }
-    // console.log(outputHTML);
-    // console.log(pathParser(command.out));
-    pathParser(getAbsPath(command.out, command.wPath)).addContent(
-      outputHTML,
-      command.appendOutput
-    );
-    return true;
-  } else {
-    console.log("Not implemented");
+      }
+    });
+
+    if (flags.includes("R")) outputHTML = outputHTML.concat(`<br>`);
   }
+  getFile(getAbsPath(programBlock.out, programBlock.wPath)).addContent(
+    outputHTML,
+    programBlock.appendOutput
+  );
+  return true;
 }

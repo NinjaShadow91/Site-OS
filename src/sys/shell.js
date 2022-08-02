@@ -1,18 +1,17 @@
-import { processManager } from "./main.js";
-import { sFile, pathParser } from "./fs.js";
-import { getAbsPath } from "../lib/lib.js";
-
-// !! Global Variable !!
-var globalShellVariables = {};
+import { File, getAbsPath, getFile, exec } from "../lib/lib.js";
+import { cError } from "../lib/libError.js";
 
 const STDIN = "/root/var/stdin";
 const STDOUT = "/root/var/stdout";
 const STDERR = "/root/var/stderr";
 
-// const keywords = ["=", "export", "clear", "hclear"];
-// const strChars = ["'", '"', "`"];
+// const keywords = ["=", "export", "clear", "hclear", "pwd"];
 
-function commandParser(commandStr, wPath) {
+function throwInvalidSyntax(str) {
+  throw new cError("Bash Syntax Error", 1, 0, null, [str]);
+}
+
+function commandParser(commandTokens, wPath) {
   let command = {
     program: "",
     flags: [],
@@ -23,109 +22,103 @@ function commandParser(commandStr, wPath) {
     out: STDOUT,
     appendError: false,
     err: STDERR,
-    envVar: [],
+    envVar: {},
     wPath: wPath,
   };
-  let cArr = commandStr.split(" ");
-  cArr = cArr.filter((e) => {
-    if (e !== "") return true;
-    else return false;
-  });
 
-  command.program = cArr[0];
-  for (let i = 1; i < cArr.length; ++i) {
-    if (cArr[i].charAt(0) == "-" && cArr[i].charAt(1) !== "-") {
-      const itr = cArr[i][Symbol.iterator]();
+  console.log(commandTokens);
+
+  command.program = commandTokens[0];
+  for (let i = 1; i < commandTokens.length; ++i) {
+    if (
+      commandTokens[i].charAt(0) == "-" &&
+      commandTokens[i].charAt(1) !== "-"
+    ) {
+      const itr = commandTokens[i][Symbol.iterator]();
       itr.next();
       let subStr = itr.next();
       while (!subStr.done) {
         command.flags.push(subStr.value);
         subStr = itr.next();
       }
-    } else if (cArr[i].charAt(0) == "-" && cArr[i].charAt(1) === "-") {
-      command.flags.push(cArr[i].slice(2));
-    } else if (cArr[i].includes("<")) {
-      command.in = cArr[i].slice(1);
-    } else if (cArr[i].includes("2>>")) {
-      command.err = cArr[i].slice(3);
+    } else if (
+      commandTokens[i].charAt(0) == "-" &&
+      commandTokens[i].charAt(1) === "-"
+    ) {
+      command.flags.push(commandTokens[i].slice(2));
+    } else if (commandTokens[i].includes("<")) {
+      command.in = commandTokens[i].slice(1);
+    } else if (commandTokens[i].includes("2>>")) {
+      command.err = commandTokens[i].slice(3);
       command.appendError = true;
-    } else if (cArr[i].includes("2>")) {
-      command.err = cArr[i].slice(2);
+    } else if (commandTokens[i].includes("2>")) {
+      command.err = commandTokens[i].slice(2);
       command.appendError = false;
-    } else if (cArr[i].includes("&>>")) {
-      command.out = cArr[i].slice(3);
+    } else if (commandTokens[i].includes("&>>")) {
+      command.out = commandTokens[i].slice(3);
       command.appendOutput = true;
-      command.err = cArr[i].slice(3);
+      command.err = commandTokens[i].slice(3);
       command.appendError = true;
-    } else if (cArr[i].includes("&>")) {
-      command.out = cArr[i].slice(2);
+    } else if (commandTokens[i].includes("&>")) {
+      command.out = commandTokens[i].slice(2);
       command.appendOutput = false;
-      command.err = cArr[i].slice(2);
+      command.err = commandTokens[i].slice(2);
       command.appendError = false;
-    } else if (cArr[i].includes(">>")) {
-      command.out = cArr[i].slice(2);
+    } else if (commandTokens[i].includes(">>")) {
+      command.out = commandTokens[i].slice(2);
       command.appendOutput = true;
-    } else if (cArr[i].includes(">")) {
-      command.out = cArr[i].slice(1);
+    } else if (commandTokens[i].includes(">")) {
+      command.out = commandTokens[i].slice(1);
       command.appendOutput = false;
     } else {
-      command.others.push(cArr[i]);
+      command.others.push(commandTokens[i]);
     }
   }
   return command;
 }
 
-// const nthIndex = (str, pat, n) => {
-//   let L = str.length,
-//     i = -1;
-//   while (n-- && i++ < L) {
-//     i = str.indexOf(pat, i);
-//     if (i < 0) break;
-//   }
-//   return i;
-// };
+function nthIndex(str, pat, n) {
+  if (typeof str !== "string") throw new TypeError();
+  var L = str.length,
+    i = -1;
+  while (n-- && i++ < L) {
+    i = str.indexOf(pat, i);
+    if (i < 0) break;
+  }
+  return i;
+}
 
-// function keywordFinder(keyword, str) {
-//   let strPosn = [];
-//   let strChar = "";
-//   for (let i = 0; i < str.length; ++i) {
-//     console.log(str.charAt(isRealToken));
-//     if (
-//       strChar === "" &&
-//       (str.charAt(i) === '"' || str.charAt(i) === "'" || str.charAt(i) === "`")
-//     ) {
-//       strChar = str.charAt(i);
-//       strPosn.push(i);
-//     } else if (strChar === str.charAt(i)) {
-//       strChar = "";
-//       strPosn.push(i);
-//     }
-//   }
+function replaceShellVariables(commnadTokens, shellVariables) {
+  let nCommandTokens = [];
+  commnadTokens.filter((token) => {
+    let n = 1;
+    let p = nthIndex(token, "$", n);
+    if (p !== -1) {
+      let prefix = token.slice(0, p);
+      while (p !== -1) {
+        let np = nthIndex(token, "$", ++n);
+        let svar =
+          shellVariables[token.slice(p + 1, np === -1 ? token.length : np)];
+        if (typeof svar !== "undefined") prefix = prefix.concat(svar);
+        p = np;
+      }
+      nCommandTokens.push(prefix);
+    } else nCommandTokens.push(token);
+  });
+  return nCommandTokens;
+}
 
-//   let found = false;
-//   let n = 1;
-//   while (nthIndex(str, keyword, n) !== -1) {
-//     let p = nthIndex(str, keyword, n);
-//     ++n;
-//     for (let j = 0; j < strPosn.length; ++j) {
-//       console.log(p, strPosn[j], strPosn[j + 1]);
-//       if (!(p > strPosn[j] && p < strPosn[++j])) {
-//         found = true;
-//       } else {
-//         found = false;
-//       }
-//     }
-//     if (found) break;
-//   }
-//   return found;
-// }
-
-function parseCommandString(commandStr, wPath) {
+function parseCommandString(commandStr, wPath, shellVariables) {
   let commnadTokens = commandStr.split(" ");
+  commnadTokens = commnadTokens.map((token) => {
+    return token.trim();
+  });
+
   commnadTokens = commnadTokens.filter((token) => {
     if (token !== "") return true;
-    else return false;
   });
+
+  commnadTokens = replaceShellVariables(commnadTokens, shellVariables);
 
   if (commnadTokens[0] === "export") {
     // syntax supported export var=value not export var = value ,etc
@@ -142,36 +135,56 @@ function parseCommandString(commandStr, wPath) {
   } else if (commnadTokens[0] === "hclear") {
     return { program: "Internal Command", others: ["hclear"] };
   } else if (commnadTokens[0] === "cd") {
+    if (typeof commnadTokens[1] === "undefined" || commnadTokens[1] === "")
+      throwInvalidSyntax(commandStr);
     return { program: "Internal Command", others: ["cd", commnadTokens[1]] };
+  } else if (commnadTokens[0] === "pwd") {
+    return { program: "Internal Command", others: ["pwd"] };
   } else {
-    return commandParser(commandStr, wPath);
+    return commandParser(commnadTokens, wPath);
   }
 }
 
-function parser(strToParse, wPath) {
-  //   console.log(wPath);
+function parser(strToParse, wPath, shellVariables) {
   try {
     let commandStrs = strToParse.split("|");
     let commands = [];
-    commands.push(parseCommandString(commandStrs[0], wPath));
+    commands.push(parseCommandString(commandStrs[0], wPath, shellVariables));
     for (let i = 1; i < commandStrs.length; ++i) {
-      let nCommand = parseCommandString(commandStrs[i], wPath);
+      let nCommand = parseCommandString(commandStrs[i], wPath, shellVariables);
       nCommand.isPiped = true;
+      nCommand.in = STDOUT;
       commands.push(nCommand);
     }
-
     return commands;
   } catch (e) {
-    throw new Error("Bash Syntax Error", { cause: e });
+    // console.log(e);
+    throwInvalidSyntax(strToParse);
   }
 }
 
 export default function shell(ROOT_DIR) {
+  let globalShellVariables = {};
   let shellHistory = [];
   let c = shellHistory.length;
 
-  if (!(ROOT_DIR instanceof sFile) || !ROOT_DIR.isDirectory())
-    throw new Error("File System Error: ROOT_DIR is not a directory.");
+  if (!(ROOT_DIR instanceof File))
+    throw new cError(
+      "File System Error: ROOT_DIR is not a file object.",
+      0,
+      1,
+      null,
+      [ROOT_DIR]
+    );
+  if (!ROOT_DIR.isDirectory())
+    throw new cError(
+      "File System Error: ROOT_DIR is not a direectory.",
+      0,
+      2,
+      null,
+      [ROOT_DIR]
+    );
+
   let wDir = ROOT_DIR;
 
   shellInput.addEventListener("keydown", (e) => {
@@ -189,79 +202,124 @@ export default function shell(ROOT_DIR) {
 
       shellHistory.push(shellInput.textContent);
       c = shellHistory.length;
-      let commands = parser(
-        shellInput.textContent,
-        wDir.getLocation().concat(wDir.getName().concat("/"))
-      );
-      commands.forEach((command) => {
-        // console.log("wDir is", wDir.getLocation());
-        if (command.program === "Internal Command") {
-          try {
-            switch (command.others[0]) {
-              case "cd":
-                let nWDir;
-                if (command.others[1] === "..") {
-                  nWDir = pathParser(wDir.getLocation());
-                  if (nWDir !== null) wDir = nWDir;
-                  else {
-                    newDiv.textContent = "Invalid directory";
+      try {
+        let commands = parser(
+          shellInput.textContent,
+          wDir.getLocation().concat(wDir.getName().concat("/")),
+          globalShellVariables
+        );
+        commands.forEach((command) => {
+          if (!command.isPiped) {
+            const out = getFile(STDOUT);
+            out.addContent("", false);
+            const err = getFile(STDERR);
+            err.addContent("", false);
+          }
+          command.wPath = wDir.getLocation().concat(wDir.getName().concat("/"));
+          if (command.program === "Internal Command") {
+            try {
+              switch (command.others[0]) {
+                case "cd":
+                  let nWDir;
+                  if (command.others[1] === "..") {
+                    nWDir = getFile(wDir.getLocation());
+                    if (nWDir !== null) wDir = nWDir;
+                    else {
+                      newDiv.textContent = "Invalid directory";
+                      shellOutputContainer.appendChild(newDiv);
+                    }
+                  } else if (command.others[1].charAt(0) !== "/") {
+                    nWDir = getFile(
+                      getAbsPath(
+                        command.others[1],
+                        wDir.getLocation().concat(wDir.getName().concat("/"))
+                      )
+                    );
+                    if (nWDir !== null) wDir = nWDir;
+                    else {
+                      newDiv.textContent = "Invalid directory";
+                      shellOutputContainer.appendChild(newDiv);
+                    }
+                  } else {
+                    nWDir = getFile(command.others[1]);
+                    if (nWDir !== null) wDir = nWDir;
+                    else {
+                      newDiv.textContent = "Invalid directory";
+                      shellOutputContainer.appendChild(newDiv);
+                    }
+                  }
+                  break;
+                case "pwd":
+                  newDiv.textContent = wDir
+                    .getLocation()
+                    .concat(wDir.getName());
+                  shellOutputContainer.appendChild(newDiv);
+                  break;
+                case "hclear":
+                  shellHistory = [];
+                  c = 0;
+                  break;
+                case "clear":
+                  document.getElementById("shellOutputContainer").innerHTML =
+                    "";
+
+                  // Not working, current command also gets cleared
+                  if (commands.length > 1) {
+                    newDiv.innerHTML = "$ ".concat(shellInput.innerHTML);
+                    console.log(newDiv.innerHTML);
                     shellOutputContainer.appendChild(newDiv);
                   }
-                } else if (command.others[1].charAt(0) !== "/") {
-                  // console.log(command.others[1], ROOT_DIR.getLocation());
-                  nWDir = pathParser(
-                    getAbsPath(
-                      command.others[1],
-                      wDir.getLocation().concat(wDir.getName().concat("/"))
-                    )
+                  break;
+                case "export":
+                  globalShellVariables[command.others[1]] = command.others[2];
+                  break;
+                default:
+                  throw new cError(
+                    "Bash Error :Undefined Internal Command",
+                    1,
+                    1,
+                    null,
+                    [command]
                   );
-                  if (nWDir !== null) wDir = nWDir;
-                  else {
-                    newDiv.textContent = "Invalid directory";
-                    shellOutputContainer.appendChild(newDiv);
-                  }
-                  // console.log(wDir);
-                } else {
-                  nWDir = pathParser(command.others[1]);
-                  if (nWDir !== null) wDir = nWDir;
-                  else {
-                    newDiv.textContent = "Invalid directory";
-                    shellOutputContainer.appendChild(newDiv);
-                  }
-                }
-                break;
-              case "hclear":
-                shellHistory = [];
-                c = 0;
-                break;
-              case "clear":
-                document.getElementById("shellOutputContainer").innerHTML = "";
-                break;
-              case "export":
-                globalShellVariables[command.others[1]] = command.others[2];
-                break;
-              default:
-                throw new Error("Bash Error :Undefined Internal Command");
+              }
+            } catch (e) {
+              console.log(e);
+              newDiv.textContent = e.messaage;
+              shellOutputContainer.appendChild(newDiv);
+            } finally {
+              shellInput.textContent = "";
             }
-          } catch (e) {
-            console.log(e);
-            newDiv.textContent = "Something went wrong";
-            shellOutputContainer.appendChild(newDiv);
-          } finally {
-            shellInput.textContent = "";
+          } else {
+            try {
+              command.envVar = { ...globalShellVariables, ...command.envar };
+              exec(command);
+              newDiv.innerHTML = getFile(STDOUT).getContent();
+            } catch (e) {
+              console.log(e);
+              if (e.getErrorCategory() === 0) {
+                newDiv.innerHTML = e.getMessage();
+              } else if (e.getErrorCategory() === 2) {
+                newDiv.innerHTML = getFile(STDERR).getContent();
+              } else {
+                newDiv.innerHTML = "Something went wrong.";
+              }
+            } finally {
+              shellOutputContainer.appendChild(newDiv);
+              shellInput.textContent = "";
+            }
           }
+        });
+      } catch (e) {
+        console.log(e);
+        if (e.getErrorCategory() === 1) {
+          newDiv.innerHTML = e.getMessage();
         } else {
-          try {
-            processManager(command);
-            newDiv.innerHTML = pathParser(STDOUT).getContent();
-          } catch (e) {
-            newDiv.innerHTML = pathParser(STDERR).getContent();
-          } finally {
-            shellOutputContainer.appendChild(newDiv);
-            shellInput.textContent = "";
-          }
+          newDiv.innerHTML = "Something went wrong.";
         }
-      });
+      } finally {
+        shellOutputContainer.appendChild(newDiv);
+        shellInput.textContent = "";
+      }
     } else if (e.key === "ArrowUp") {
       --c;
       if (c >= 0) shellInput.textContent = shellHistory[c];
@@ -277,4 +335,4 @@ export default function shell(ROOT_DIR) {
   });
 }
 
-export { shell, globalShellVariables };
+export { shell };

@@ -1,48 +1,55 @@
-import { ROOT_DIR } from "./fs.js";
-import { ls } from "../bin/ls.js";
-
-new sFile("var", "/root/", "DIR");
-new sFile("stdin", "/root/var/");
-new sFile("stderr", "/root/var/");
-new sFile("stdout", "/root/var/");
-
-import { sFile, pathParser } from "./fs.js";
+import { ROOT_DIR, cFile } from "./fs.js";
 import { shell } from "./shell.js";
+import { cError } from "../lib/libError.js";
 
-export function processManager(command) {
-  let cFile;
-  switch (command.program) {
+// Program imports
+import { ls } from "../bin/ls.js";
+import { echo } from "../bin/echo.js";
+import { uname } from "../bin/uname.js";
+import { touch } from "../bin/touch.js";
+import { mkdir } from "../bin/mkdir.js";
+import { cat } from "../bin/cat.js";
+import { nano } from "../bin/nano.js";
+
+// Setting up File System
+new cFile("var", "/root/", "DIR");
+new cFile("stdin", "/root/var/");
+new cFile("stderr", "/root/var/");
+new cFile("stdout", "/root/var/");
+new cFile("diri", "/root/var/", "DIR");
+new cFile(".diri1", "/root/var/", "DIR");
+new cFile("diriii", "/root/var/diri", "DIR");
+new cFile("stdout1", "/root/var/diri");
+new cFile("stdout", "/root/var/diri");
+new cFile(".hidden", "/root/var/").addContent("Checking cat", false);
+
+function processManager(programBlock) {
+  console.log(programBlock);
+  switch (programBlock.program) {
     case "ls":
-      return ls(command);
+      return ls(programBlock);
+    case "echo":
+      return echo(programBlock);
     case "uname":
-      return uname();
-      break;
+      return uname(programBlock);
     case "mkdir":
-      // cDir = pathParser(command.others[0], workingDirectory);
-      return mkdir(workingDirectory, command.others[0]);
+      return mkdir(programBlock);
     case "touch":
-      return touch(workingDirectory, command.others[0]);
-    case "cd":
-      // console.log(command.others[0]);
-      workingDirectory = cd(command.others[0]);
-    case "pwd":
-      newDiv.innerHTML = pwd(workingDirectory);
-      break;
+      return touch(programBlock);
     case "cat":
-      cFile = pathParser(command.others[0], workingDirectory);
-      newDiv.innerHTML = cat(cFile);
-      break;
+      return cat(programBlock);
     case "nano":
-      cFile = pathParser(command.others[0], workingDirectory);
-      nano(cFile);
-      break;
+      return nano(programBlock);
     default:
-      throw new Error(`$ Program not found.\n`, { program: command });
+      throw new cError(`$ Program not found.\n`, 0, 0, null, [programBlock]);
   }
-  shellOutputContainer.appendChild(newDiv);
-  shellInput.innerHTML = "";
 }
 
+export function loader(programBlock) {
+  return processManager(programBlock);
+}
+
+// Authentication can be implemented here
 function startOS() {
   shell(ROOT_DIR);
 }
