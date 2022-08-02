@@ -52,17 +52,19 @@ export class cFile {
     );
   }
 
-  constructor(name, location, contentType) {
+  constructor(location, contentType) {
     if (!(typeof location === "string") || location === "")
       this.#throwNotValidLocation(location);
 
-    if (name === "root" && location == "/") {
-      this.#name = name;
+    if (location == "/") {
+      this.#name = "root";
       this.#properties.location = location;
     } else {
-      const pDir = pathParser(location);
-
-      if (pDir !== undefined) {
+      let lp = location.slice(0, location.lastIndexOf("/"));
+      if (lp === "") lp = "/";
+      const pDir = pathParser(lp);
+      const name = location.split("/")[location.split("/").length - 1];
+      if (pDir !== null) {
         if (!(typeof name === "string") || name === "")
           this.#throwNotValidName(name);
         const sameName = pDir.getContent().filter((file) => {
@@ -308,7 +310,7 @@ export class cFile {
   }
 }
 
-export const ROOT_DIR = new cFile("root", "/", "DIR");
+export const ROOT_DIR = new cFile("/", "DIR");
 
 //
 /**
@@ -325,12 +327,24 @@ export function pathParser(path) {
 
   let pDir = ROOT_DIR;
 
-  let subDirs = [];
+  let rsubDirs = [];
   path.split("/").forEach((i) => {
-    if (i !== "") subDirs.push(i);
+    if (i !== "") rsubDirs.push(i);
   });
 
-  // console.log(subDirs);
+  let subDirs = [];
+  for (let i = 0; i < rsubDirs.length; ++i) {
+    if (rsubDirs[i] === "..") {
+      subDirs.pop();
+      // if (subDirs.length !== 0) subDirs.pop();
+      // else
+      //   throw new cError("File System Error: Not a valid path.", 0, 3, null, [
+      //     path,
+      //   ]);
+    } else if (rsubDirs[i] !== ".") {
+      subDirs.push(rsubDirs[i]);
+    }
+  }
 
   for (let i = 0; i < subDirs.length; ++i) {
     let isPresent = false;

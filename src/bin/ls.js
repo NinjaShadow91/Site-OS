@@ -22,8 +22,6 @@ export function ls(programBlock) {
   if (flags.includes("R")) files = recurseDir(directory);
   else files = { [directory.getName()]: directory.getContent() };
 
-  console.log(recurseDir(directory));
-
   let outputHTML = "";
   for (const dir in files) {
     if (flags.includes("R"))

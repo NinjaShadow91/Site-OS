@@ -12,19 +12,19 @@ import { cat } from "../bin/cat.js";
 import { nano } from "../bin/nano.js";
 
 // Setting up File System
-new cFile("var", "/root/", "DIR");
-new cFile("stdin", "/root/var/");
-new cFile("stderr", "/root/var/");
-new cFile("stdout", "/root/var/");
-new cFile("diri", "/root/var/", "DIR");
-new cFile(".diri1", "/root/var/", "DIR");
-new cFile("diriii", "/root/var/diri", "DIR");
-new cFile("stdout1", "/root/var/diri");
-new cFile("stdout", "/root/var/diri");
-new cFile(".hidden", "/root/var/").addContent("Checking cat", false);
+new cFile("/var", "DIR");
+new cFile("/var/stdin");
+new cFile("/var/stderr");
+new cFile("/var/stdout");
+new cFile("/var/diri", "DIR");
+new cFile("/var/.diri1", "DIR");
+new cFile("/var/diri/diriii", "DIR");
+new cFile("/var/diri/stdout1");
+new cFile("/var/diri/stdout");
+new cFile("/var/.hidden").addContent("Checking cat", false);
 
 function processManager(programBlock) {
-  console.log(programBlock);
+  // console.log(programBlock);
   switch (programBlock.program) {
     case "ls":
       return ls(programBlock);

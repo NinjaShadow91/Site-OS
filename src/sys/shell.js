@@ -26,8 +26,6 @@ function commandParser(commandTokens, wPath) {
     wPath: wPath,
   };
 
-  console.log(commandTokens);
-
   command.program = commandTokens[0];
   for (let i = 1; i < commandTokens.length; ++i) {
     if (
@@ -158,7 +156,6 @@ function parser(strToParse, wPath, shellVariables) {
     }
     return commands;
   } catch (e) {
-    // console.log(e);
     throwInvalidSyntax(strToParse);
   }
 }
@@ -193,19 +190,27 @@ export default function shell(ROOT_DIR) {
       const shellOutputContainer = document.getElementById(
         "shellOutputContainer"
       );
+
       let newDiv = document.createElement("div");
       newDiv.className = "shellOutput";
-      newDiv.innerHTML = "$ ".concat(shellInput.innerHTML);
+      newDiv.innerHTML = wDir
+        .getLocation()
+        .concat(" $ ".concat(shellInput.innerHTML));
       shellOutputContainer.appendChild(newDiv);
+
       newDiv = document.createElement("div");
       newDiv.className = "shellOutput";
+      if (shellInput.textContent === "") {
+        shellInput.textContent = "";
+        return;
+      }
 
       shellHistory.push(shellInput.textContent);
       c = shellHistory.length;
       try {
         let commands = parser(
           shellInput.textContent,
-          wDir.getLocation().concat(wDir.getName().concat("/")),
+          wDir.getLocation(),
           globalShellVariables
         );
         commands.forEach((command) => {
@@ -215,44 +220,25 @@ export default function shell(ROOT_DIR) {
             const err = getFile(STDERR);
             err.addContent("", false);
           }
-          command.wPath = wDir.getLocation().concat(wDir.getName().concat("/"));
+          command.wPath = wDir.getLocation();
           if (command.program === "Internal Command") {
             try {
               switch (command.others[0]) {
                 case "cd":
-                  let nWDir;
-                  if (command.others[1] === "..") {
-                    nWDir = getFile(wDir.getLocation());
-                    if (nWDir !== null) wDir = nWDir;
-                    else {
-                      newDiv.textContent = "Invalid directory";
-                      shellOutputContainer.appendChild(newDiv);
-                    }
-                  } else if (command.others[1].charAt(0) !== "/") {
-                    nWDir = getFile(
-                      getAbsPath(
-                        command.others[1],
-                        wDir.getLocation().concat(wDir.getName().concat("/"))
-                      )
-                    );
-                    if (nWDir !== null) wDir = nWDir;
-                    else {
-                      newDiv.textContent = "Invalid directory";
-                      shellOutputContainer.appendChild(newDiv);
-                    }
-                  } else {
-                    nWDir = getFile(command.others[1]);
-                    if (nWDir !== null) wDir = nWDir;
-                    else {
-                      newDiv.textContent = "Invalid directory";
-                      shellOutputContainer.appendChild(newDiv);
-                    }
+                  let nWDir = getFile(
+                    getAbsPath(command.others[1], wDir.getLocation())
+                  );
+                  if (nWDir !== null) wDir = nWDir;
+                  else {
+                    newDiv.textContent = "Invalid directory";
+                    shellOutputContainer.appendChild(newDiv);
                   }
+                  document.getElementById("shellInputPrompt").textContent = wDir
+                    .getLocation()
+                    .concat(" $ ");
                   break;
                 case "pwd":
-                  newDiv.textContent = wDir
-                    .getLocation()
-                    .concat(wDir.getName());
+                  newDiv.textContent = wDir.getLocation();
                   shellOutputContainer.appendChild(newDiv);
                   break;
                 case "hclear":
