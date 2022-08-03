@@ -184,6 +184,14 @@ export default function shell(ROOT_DIR) {
 
   let wDir = ROOT_DIR;
 
+  // focus prompt logic
+  document
+    .querySelector(".shellMainContainer")
+    .addEventListener("click", (e) => {
+      e.preventDefault();
+      document.querySelector("#shellInput").focus();
+    });
+
   shellInput.addEventListener("keydown", (e) => {
     if (e.key === "Enter") {
       const shellInput = document.getElementById("shellInput");
