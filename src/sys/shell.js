@@ -233,6 +233,9 @@ export default function shell(ROOT_DIR) {
             try {
               switch (command.others[0]) {
                 case "cd":
+                  // console.log(
+                  //   getAbsPath(command.others[1], wDir.getLocation())
+                  // );
                   let nWDir = getFile(
                     getAbsPath(command.others[1], wDir.getLocation())
                   );
