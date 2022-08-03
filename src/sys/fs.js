@@ -64,6 +64,7 @@ export class cFile {
       if (lp === "") lp = "/";
       const pDir = pathParser(lp);
       const name = location.split("/")[location.split("/").length - 1];
+      if (name === ".." || name === ".") this.#throwNotValidName(name);
       if (pDir !== null) {
         if (!(typeof name === "string") || name === "")
           this.#throwNotValidName(name);
@@ -78,7 +79,7 @@ export class cFile {
           this.#throwSameNameFileAlreadyPresent(name);
         }
       } else {
-        this.#throwNotValidLocation(location);
+        this.#throwNotValidLocation(lp);
       }
 
       this.#properties.location = location;
