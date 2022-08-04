@@ -17,28 +17,7 @@ export function mkdir(programBlock) {
     if (programBlock.flags.includes("p")) {
       // To implement
     } else {
-      if (programBlock.others[0].includes("/")) {
-        new File(
-          programBlock.others[0].slice(
-            programBlock.others[0].lastIndexOf("/") + 1,
-            programBlock.others[0].length
-          ),
-          getAbsPath(
-            programBlock.others[0].slice(
-              0,
-              programBlock.others[0].lastIndexOf("/")
-            ),
-            programBlock.wPath
-          ),
-          "DIR"
-        );
-      } else {
-        new File(
-          programBlock.others[0],
-          getAbsPath("", programBlock.wPath),
-          "DIR"
-        );
-      }
+      new File(getAbsPath(programBlock.others[0], programBlock.wPath), "DIR");
     }
     return true;
   } catch (e) {
