@@ -1,12 +1,10 @@
 import { getAbsPath, getFile } from "../lib/lib.js";
 
 export function cat(programBlock) {
-  console.log(programBlock);
   let out = getFile(getAbsPath(programBlock.out, programBlock.wPath));
   let inf;
   if (typeof programBlock.others[0] === "undefined") {
     inf = getFile(getAbsPath(programBlock.in, programBlock.wPath));
-    console.log(inf);
     out.addContent(inf.getContent(), false);
   } else {
     let append = false;

@@ -41,8 +41,6 @@ export function ls(programBlock) {
               .getPermissions()
               .concat("   ")
               .concat(file.getCreationTime());
-          // .concat(file.getCreationTime().toDateString());
-          // console.log(`${detailString} ${file.getName()}\n`);
           if (file.isDirectory()) {
             outputHTML = outputHTML.concat(
               `<pre style="color:blue;margin:0px;padding:0px">${detailString}     ${file.getSize()}      ${file.getName()}</pre>`

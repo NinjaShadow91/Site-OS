@@ -233,9 +233,6 @@ export default function shell(ROOT_DIR) {
             try {
               switch (command.others[0]) {
                 case "cd":
-                  // console.log(
-                  //   getAbsPath(command.others[1], wDir.getLocation())
-                  // );
                   let nWDir = getFile(
                     getAbsPath(command.others[1], wDir.getLocation())
                   );
@@ -263,7 +260,6 @@ export default function shell(ROOT_DIR) {
                   // Not working, current command also gets cleared
                   if (commands.length > 1) {
                     newDiv.innerHTML = "$ ".concat(shellInput.innerHTML);
-                    console.log(newDiv.innerHTML);
                     shellOutputContainer.appendChild(newDiv);
                   }
                   break;

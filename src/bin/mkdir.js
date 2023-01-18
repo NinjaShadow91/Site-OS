@@ -21,7 +21,6 @@ export function mkdir(programBlock) {
     }
     return true;
   } catch (e) {
-    console.log(e);
     getFile(getAbsPath(programBlock.err, programBlock.wPath)).addContent(
       e.getMessage(),
       false

@@ -24,7 +24,6 @@ new cFile("/var/diri/stdout");
 new cFile("/var/.hidden").addContent("Checking cat", false);
 
 function processManager(programBlock) {
-  // console.log(programBlock);
   switch (programBlock.program) {
     case "ls":
       return ls(programBlock);

@@ -354,13 +354,11 @@ export function pathParser(path) {
         if (pDir.getContent()[j].getName() === subDirs[i]) {
           pDir = pDir.getContent()[j];
           if (!pDir.isDirectory() && i !== subDirs.length - 1) return null;
-          // console.log("for", i, pDir);
           isPresent = true;
           break;
         }
       }
       if (!isPresent) {
-        // console.log("ret", pDir);
         return null;
       }
     }
