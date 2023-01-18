@@ -9,25 +9,38 @@ export function nano(programBlock) {
   nanoDiv.classList.remove("invisible");
 
   let file = getFile(getAbsPath(programBlock.others[0], programBlock.wPath));
-  if (file === null) {
+  if (file.isDirectory()) {
+    try {
+      getFile(getAbsPath(programBlock.err, programBlock.wPath)).addContent(
+        "File is Directory.",
+        false
+      );
+    } catch (e) {
+      nanoDiv.classList.add("invisible");
+      nanoDiv.textContent = "";
+      shellEnv.classList.remove("invisible");
+      throw new cError("File is Directory.", 2, 5, null, null);
+    }
+
+    nanoDiv.classList.add("invisible");
+    nanoDiv.textContent = "";
+    shellEnv.classList.remove("invisible");
+    throw new cError("File is Directory.", 2, 5, null, null);
+  } else if (file === null) {
     let programBlockTouch = programBlock;
     programBlockTouch.program = "touch";
     exec(programBlock);
     file = getFile(getAbsPath(programBlock.others[0], programBlock.wPath));
   }
-  console.log(file);
   nanoDiv.textContent = file.getContent();
 
   nanoDiv.addEventListener("keydown", (e) => {
     if (e.ctrlKey && e.key === "x") {
-      // console.log("exiting");
       nanoDiv.classList.add("invisible");
       nanoDiv.textContent = "";
       shellEnv.classList.remove("invisible");
       // change . to o for saving
     } else if (e.ctrlKey && e.key === ".") {
-      // console.log("saving");
-      console.log(file);
       file.addContent(
         document.getElementsByClassName("nano")[0].textContent,
         false
